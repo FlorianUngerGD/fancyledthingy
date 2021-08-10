@@ -33,7 +33,7 @@ void loop() {
   int state = motionX + motionY + motionZ;
   
   // print out the state of the accelerometer:
-  Serial.println("accelerometer: "state);
+  Serial.println("accelerometer: " + state);
   
   int asdf = state * 10 / 90;
 
