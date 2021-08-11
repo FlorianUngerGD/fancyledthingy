@@ -22,6 +22,10 @@ int smoothLow = 0;
 int smoothMid = 0;
 int smoothHigh = 0;
 
+float l = 0.0f;
+float m = 0.0f;
+float h = 0.0f;
+
 void setup() {
   CircuitPlayground.begin();
   Serial.begin(9600);
@@ -29,15 +33,16 @@ void setup() {
 }
 
 void loop() {
+  getSpectrum();
+  showPressureLevel(10, 50, 100, (int) (l * 255), (int) (m * 255), (int) (h * 255));
+}
+
+void getSpectrum() {
   uint8_t i,j;
   uint16_t spectrum[BINS];     // FFT spectrum output buffer
   uint16_t avg[BINS];          // The average of FRAME "listens"
-  
-  int total = 0;
-  int iterTotal = 0;
-  int percentile25 = 0;
-  int percentile50 = 0;
-  
+
+  // Get spectrum data over FRAMES avarage
   for(j=1; j <= FRAMES; j++) {             // We gather data FRAMES times and average it
      CircuitPlayground.mic.fft(spectrum);  // Here is the CP listen and FFT the data routine
      for(i=0; i < BINS; i++) {             // Add for an average
@@ -50,18 +55,10 @@ void loop() {
      }
   }
   for(i=0; i < BINS; i++) {               // For each output bin average
-    iterTotal = iterTotal + avg[i];
-    if (!percentile25 && iterTotal > total / 3)
-      percentile25 = i;
-    if (!percentile50 && iterTotal > total * 2 / 3)
-      percentile50 = i;
-      
     avg[i] = avg[i] / FRAMES;            //  divide about the number of values aaveraged
-     
-
-    total += avg[i];
   }
 
+  // Get total value for lows, mids and highs
   int low = 0;
   int mid = 0;
   int high = 0;
@@ -77,83 +74,31 @@ void loop() {
     }
   }
 
+  // Smooth in the current lows, mids and highs
   smoothLow = SMOOTH * smoothLow + (1 - SMOOTH) * low;
   smoothMid = SMOOTH * smoothMid + (1 - SMOOTH) * mid;
   smoothHigh = SMOOTH * smoothHigh + (1 - SMOOTH) * high;
 
+  // Intensify the current freuquency
   float partialLow, partialMid, partialHigh;
   partialLow = powf((float) smoothLow, ACCENT);
   partialMid = powf((float) smoothMid, ACCENT);
   partialHigh = powf((float) smoothHigh, ACCENT);
-  
+
+  // Normalize values so that low + mid + high = 1
   float partialSum = partialLow + partialMid + partialHigh;
-  partialLow = partialLow / partialSum;
-  partialMid = partialMid / partialSum;
-  partialHigh = partialHigh / partialSum;
-
-
-/*
-  if (low >= smoothLow)
-    smoothLow = low;
-  else smoothLow = smoothLow - 1;
-  if (mid >= smoothMid)
-    smoothMid = mid;
-  else smoothMid = smoothMid - 1;
-  if (high >= smoothHigh)
-    smoothHigh = high;
-  else smoothHigh = smoothHigh - 1;
-*/
-/*
-  for (i=0; i < BINS; i++) {
-    if (i < 10) {Serial.print(" ");}
-    Serial.print(i); Serial.print(" | ");
-    if (avg[i] < 10) {Serial.print(" ");}
-    if (avg[i] < 100) {Serial.print(" ");}
-    Serial.print(avg[i]); Serial.print(" ");
-    for (j=0; j < avg[i] * 300 / total; j++) {
-      if (i >= START_MID && i < START_HIGH) {
-        Serial.print("~");
-      } else {
-        Serial.print("-"); 
-      }
-    }
-    Serial.println("");
-  }
-*/
-  Serial.print("L ");
-  for (i=0; i < (int) (partialLow * 20); i++) {
-    Serial.print("|");
-  }
-  Serial.println("");
+  l = partialLow / partialSum;
+  m = partialMid / partialSum;
+  h = partialHigh / partialSum;
   
-  Serial.print("M ");
-  for (i=0; i < (int) (partialMid * 20); i++) {
-    Serial.print("|");
-  }
-  Serial.println("");
-  
-  Serial.print("H ");
-  for (i=0; i < (int) (partialHigh * 20); i++) {
-    Serial.print("|");
-  }
-  Serial.println("");
-  Serial.println("");
-/*
-  Serial.println((int) (partialLow * 255));
-  Serial.println((int) (partialMid * 255));
-  Serial.println((int) (partialHigh * 255));
-  Serial.println("");
-  */
-
-  
-  showPressureLevel(10, 50, 100, (int) (partialLow * 255), (int) (partialMid * 255), (int) (partialHigh * 255));
+  //showPressureLevel(10, 50, 100, (int) (partialLow * 255), (int) (partialMid * 255), (int) (partialHigh * 255));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void showPressureLevel(int time, int min, int max, int r, int g, int b) {
   int level = (CircuitPlayground.mic.soundPressureLevel(time) - min) / ((max - min) / LEDS);
   for (int i = 0; i < LEDS; i++) {
-    if (100 >= i) {
+    if (level >= i) {
       CircuitPlayground.setPixelColor(i, r, g, b);
     } else {
       CircuitPlayground.setPixelColor(i, 0, 0, 0);
