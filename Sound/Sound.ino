@@ -16,7 +16,12 @@
 
 #define ACCENT      3   // Accent as power
 #define SMOOTH      0.8 // Smoothness as ratio of old Value
- 
+
+// Bounce Settings
+#define SENSIBILITY_BOUNCE 30
+#define THRESHOLD_BOUNCE 12
+#define DECAY_BOUNCE 0.1
+#define DECAY_POW_BOUNCE 3
 
 int smoothLow = 0;
 int smoothMid = 0;
@@ -26,18 +31,45 @@ float l = 0.0f;
 float m = 0.0f;
 float h = 0.0f;
 
+int bounce = 0;
+float smoothIntensity = 0;
+
 void setup() {
   CircuitPlayground.begin();
   Serial.begin(9600);
   Serial.println("Start");
+  
+  CircuitPlayground.setAccelRange(LIS3DH_RANGE_8_G); // setup accelerometer
 }
 
 void loop() {
-  getSpectrum();
-  showPressureLevel(10, 50, 100, (int) (l * 255), (int) (m * 255), (int) (h * 255));
+  setBounce();
+  setSpectrum();
+  //showPressureLevel(10, 50, 100, (int) (l * 255), (int) (m * 255), (int) (h * 255));
 }
 
-void getSpectrum() {
+///////////////////////////////////////////////////////////////////////////////
+void setBounce() {
+  int motionX = -CircuitPlayground.motionX();
+  float intensity = (float) (motionX - THRESHOLD_BOUNCE) / SENSIBILITY_BOUNCE;
+  if (intensity < 0) {
+    intensity = 0;
+  }
+  if (intensity >= smoothIntensity) {
+    smoothIntensity = intensity;
+  } else {
+    smoothIntensity = smoothIntensity - DECAY_BOUNCE;
+    if (smoothIntensity < 0) {
+      smoothIntensity = 0;
+    }
+  }
+  float newIntensity = powf(smoothIntensity, DECAY_POW_BOUNCE);
+  Serial.println(newIntensity);
+  CircuitPlayground.setBrightness(newIntensity * 255);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void setSpectrum() {
   uint8_t i,j;
   uint16_t spectrum[BINS];     // FFT spectrum output buffer
   uint16_t avg[BINS];          // The average of FRAME "listens"
@@ -91,7 +123,9 @@ void getSpectrum() {
   m = partialMid / partialSum;
   h = partialHigh / partialSum;
   
-  //showPressureLevel(10, 50, 100, (int) (partialLow * 255), (int) (partialMid * 255), (int) (partialHigh * 255));
+  for (int i = 0; i < LEDS; i++) {
+    CircuitPlayground.setPixelColor(i, l * 255, m * 255, h * 255);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
