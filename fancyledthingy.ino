@@ -27,15 +27,13 @@ void setup() {
 void loop() {
   // accelerometer stuff:
   int motionX = CircuitPlayground.motionX();
-  int motionY = CircuitPlayground.motionY();
-  int motionZ = CircuitPlayground.motionZ();
 
-  int state = motionX + motionY + motionZ;
+  int state = - motionX;
   
   // print out the state of the accelerometer:
   Serial.println("accelerometer: " + state);
   
-  int asdf = state * 10 / 90;
+  int asdf = state * 10 / 40;
 
   for (int i = 0; i < 10; i++) {
     if(asdf > i) {
