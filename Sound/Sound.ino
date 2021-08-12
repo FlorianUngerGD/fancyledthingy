@@ -1,6 +1,4 @@
 #include <Adafruit_CircuitPlayground.h>
-//#include <Adafruit_NeoPixel.h>
-#include <Adafruit_CPlay_NeoPixel.h>
 
 #ifdef __AVR__
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
@@ -30,10 +28,10 @@
 
 // NeoPixel Settings
 #define LED_PIN     12 // Which pin on the Arduino is connected to the NeoPixels
-#define LED_COUNT  1 // How many NeoPixels are attached to the Arduino
+#define LED_COUNT    1 // How many NeoPixels are attached to the Arduino
 
 // Declare our NeoPixel strip object:
-Adafruit_CPlay_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_CPlay_NeoPixel strip = Adafruit_CPlay_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 int smoothLow = 0;
 int smoothMid = 0;
@@ -48,19 +46,17 @@ float smoothIntensity = 0;
 
 void setup() {
   CircuitPlayground.begin();
+  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
   Serial.begin(9600);
   Serial.println("Start");
-  
   CircuitPlayground.setAccelRange(LIS3DH_RANGE_8_G); // setup accelerometer
-
-  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-  strip.show();            // Turn OFF all pixels ASAP
 }
 
 void loop() {
   setBounce();
   setSpectrum();
   //showPressureLevel(10, 50, 100, (int) (l * 255), (int) (m * 255), (int) (h * 255));
+  strip.show();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,7 +77,6 @@ void setBounce() {
   float newIntensity = powf(smoothIntensity, DECAY_POW_BOUNCE);
   Serial.println(newIntensity);
   CircuitPlayground.setBrightness(newIntensity * 255);
-  
   strip.setBrightness(newIntensity * 255);
 }
 
@@ -143,7 +138,6 @@ void setSpectrum() {
   for (int i = 0; i < LEDS; i++) {
     CircuitPlayground.setPixelColor(i, l * 255, m * 255, h * 255);
   }
-  
   for (int i = 0; i < LED_COUNT; i++) {
     strip.setPixelColor(i, l * 255, m * 255, h * 255);
   }
